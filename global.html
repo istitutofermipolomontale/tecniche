@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Sfida Sneaker - UrbanShoes Dashboard</title>
+
+<style>
+/* =====================================================================
+   SFIDA SNEAKER - URBANSHOES DASHBOARD
+   Compito di realtà di economia aziendale
+   Un solo file: nessuna libreria esterna, solo HTML + CSS + JavaScript.
+   ===================================================================== */
+
+/* ---------- 1. VARIABILI (colori, font) ---------- */
+:root {
+  --bg:      #080c16;   /* sfondo pagina */
+  --bg2:     #0d1322;
+  --panel:   #121a2e;   /* schede */
+  --panel2:  #18223a;
+  --line:    #26335a;   /* bordi */
+  --text:    #e9eefc;
+  --muted:   #9fb0d6;
+
+  /* Colori fluo */
+  --cyan:    #22e4ff;
+  --lime:    #b8ff3d;
+  --magenta: #ff3ea5;
+  --red:     #ff4455;
+  --amber:   #ffc83d;
+
+  --radius:  16px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/* ---------- 2. BASE ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--text);
+  background-color: var(--bg);
+  /* Luci colorate + griglia sottile stile "terminale" */
+  background-image:
+    radial-gradient(900px 500px at 85% -10%, rgba(34, 228, 255, .10), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(255, 62, 165, .09), transparent 60%),
+    linear-gradient(rgba(255, 255, 255, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px);
+  background-size: auto, auto, 40px 40px, 40px 40px;
+  background-attachment: fixed;
+}
+body.modal-open { overflow: hidden; }
+
+/* Testo solo per screen reader */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+h1, h2, h3 { font-weight: 800; }
+h2:focus { outline: none; }
+
+/* ---------- 3. BARRA IN ALTO (HUD): logo, avanzamento, XP ---------- */
+.hud {
+  position: sticky; top: 0; z-index: 50;
+  display: grid;
+  grid-template-columns: auto 1fr minmax(230px, 300px);
+  align-items: center;
+  gap: 12px 24px;
+  padding: 12px clamp(14px, 3vw, 32px);
+  background: rgba(8, 12, 22, .9);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand .logo { font-size: 30px; filter: drop-shadow(0 0 8px rgba(34, 228, 255, .6)); }
+.brand h1 { margin: 0; font-size: 1.1rem; line-height: 1.15; letter-spacing: .02em; }
+.brand small {
+  display: block; font-family: var(--mono); font-size: .72rem;
+  color: var(--cyan); letter-spacing: .08em; text-transform: uppercase;
+}
+
+/* Tappe della missione */
+.stepper { list-style: none; display: flex; justify-content: center; gap: 6px; margin: 0; padding: 0; }
+.stepper li {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--muted); font-size: .85rem; font-weight: 600;
+}
+.stepper li:not(:last-child)::after {
+  content: ""; width: clamp(14px, 3vw, 36px); height: 2px; background: var(--line); margin-left: 4px;
+}
+.stepper .dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 2px solid var(--line); font-family: var(--mono); font-size: .8rem;
+  transition: all .4s ease;
+}
+.stepper li.current { color: var(--text); }
+.stepper li.current .dot { background: var(--cyan); border-color: var(--cyan); color: #04101a; box-shadow: 0 0 14px rgba(34, 228, 255, .7); }
+.stepper li.done { color: var(--lime); }
+.stepper li.done .dot { background: var(--lime); border-color: var(--lime); color: #04101a; font-size: 0; }
+.stepper li.done .dot::before { content: "✓"; font-size: .9rem; font-weight: 900; }
+
+/* Contatore XP */
+.xp {
+  position: relative;
+  padding: 8px 12px 10px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--panel);
+}
+.xp-top { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--mono); font-size: .8rem; }
+.rank { color: var(--amber); text-transform: uppercase; letter-spacing: .06em; }
+.xp-num { color: var(--muted); }
+.xp-num b { font-size: 1.4rem; color: var(--lime); font-variant-numeric: tabular-nums; transition: color .3s; }
+.xp-bar {
+  height: 10px; margin-top: 6px; border-radius: 99px; overflow: hidden;
+  background: #0a1020; border: 1px solid var(--line);
+}
+.xp-fill {
+  height: 100%; width: 0; border-radius: 99px;
+  background: linear-gradient(90deg, var(--cyan), var(--lime));
+  box-shadow: 0 0 12px rgba(34, 228, 255, .6);
+}
+.xp.gain { animation: glowGain 1.3s ease-out; }
+.xp.loss { animation: glowLoss 1.3s ease-out; }
+.xp.loss .xp-fill { background: linear-gradient(90deg, var(--red), var(--amber)); }
+.xp.loss .xp-num b { color: var(--red); }
+
+/* "+300 XP" che vola via */
+.xp-float {
+  position: absolute; right: 12px; top: 100%; margin-top: 4px;
+  font-family: var(--mono); font-weight: 800; font-size: 1.4rem;
+  pointer-events: none; animation: floatUp 1.5s ease-out forwards;
+  text-shadow: 0 0 12px currentColor;
+}
+.xp-float.gain { color: var(--lime); }
+.xp-float.loss { color: var(--red); }
+
+/* ---------- 4. LAYOUT PRINCIPALE E SCHERMATE ---------- */
+main { max-width: 980px; margin: 0 auto; padding: clamp(16px, 3vw, 36px) clamp(14px, 3vw, 24px) 50px; }
+
+.screen { display: none; }
+.screen.active { display: block; animation: fadeIn .6s ease both; }   /* fade-in tra le schermate */
+
+.card {
+  background: linear-gradient(180deg, var(--panel), var(--bg2));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: clamp(18px, 3vw, 32px);
+  box-shadow: 0 0 0 1px rgba(34, 228, 255, .04), 0 20px 50px rgba(0, 0, 0, .35);
+  margin-bottom: 20px;
+}
+/* Barretta in stile finestra di terminale */
+.term-bar {
+  display: flex; align-items: center; gap: 7px;
+  padding-bottom: 14px; margin-bottom: 18px;
+  border-bottom: 1px dashed var(--line);
+  font-family: var(--mono); font-size: .8rem; color: var(--muted);
+}
+.term-bar i { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.term-bar i:nth-child(1) { background: #ff5f57; }
+.term-bar i:nth-child(2) { background: #febc2e; }
+.term-bar i:nth-child(3) { background: #28c840; }
+.term-bar span { margin-left: 8px; }
+
+.tag {
+  display: inline-block; padding: 3px 12px; border-radius: 99px;
+  font-family: var(--mono); font-size: .75rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--cyan); border: 1px solid var(--cyan); background: rgba(34, 228, 255, .08);
+}
+.screen-title { font-size: clamp(1.5rem, 3.8vw, 2.3rem); line-height: 1.15; margin: 10px 0 12px; }
+.lead { color: var(--muted); font-size: 1.1rem; margin: 0 0 20px; }
+
+/* ---------- 5. BOTTONI ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 12px 26px;
+  font: inherit; font-weight: 800; font-size: 1.05rem; letter-spacing: .01em;
+  border: 2px solid transparent; border-radius: 14px; cursor: pointer;
+  transition: transform .2s, box-shadow .2s, filter .2s, opacity .2s;
+}
+.btn-primary {
+  color: #04101a;
+  background: linear-gradient(135deg, var(--cyan), var(--lime));
+  box-shadow: 0 6px 24px rgba(34, 228, 255, .28);
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(34, 228, 255, .45); }
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+.btn-ghost { color: var(--text); background: transparent; border-color: var(--line); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--cyan); color: var(--cyan); }
+.btn:disabled {
+  cursor: not-allowed; color: var(--muted); background: var(--panel2);
+  border: 2px dashed var(--line); box-shadow: none;
+}
+.btn:focus-visible, .field input:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+.btn.pulse { animation: pulseBtn 1.6s ease-in-out infinite; }
+.xp-chip {
+  white-space: nowrap; flex: none;
+  font-family: var(--mono); font-size: .8rem; padding: 2px 9px; border-radius: 99px;
+  background: rgba(4, 16, 26, .25);
+}
+.btn:disabled .xp-chip { background: rgba(255, 255, 255, .06); }
+.actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 22px; }
+
+/* ---------- 6. SCHERMATA 1: BRIEFING ---------- */
+.briefing { display: flex; gap: 20px; align-items: flex-start; }
+.avatar {
+  flex: none; width: 76px; height: 76px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 38px;
+  background: radial-gradient(circle at 30% 30%, #223056, var(--panel2));
+  border: 2px solid var(--cyan); box-shadow: 0 0 22px rgba(34, 228, 255, .4);
+}
+.briefing-from { font-family: var(--mono); color: var(--cyan); font-size: .85rem; margin: 0 0 8px; }
+/* Il testo completo (trasparente) e quello "scritto" stanno nella stessa cella:
+   così lo spazio è già riservato e la pagina non salta mentre si scrive. */
+.terminal-text {
+  margin: 0; display: grid;
+  font-size: 1.2rem; line-height: 1.6;
+  border-left: 3px solid var(--cyan); padding-left: 16px;
+  cursor: pointer;
+}
+.terminal-text > span { grid-area: 1 / 1; }
+#briefingFull { color: transparent; user-select: none; }
+.cursor { display: inline-block; color: var(--cyan); animation: blink 1s steps(2) infinite; margin-left: 2px; }
+
+/* ---------- 7. SCHERMATA 2: FORM ---------- */
+.fields { display: grid; gap: 18px; }
+.field {
+  padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel2);
+  transition: border-color .2s, box-shadow .2s;
+}
+.field:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(34, 228, 255, .1); }
+.field.has-error { border-color: var(--red); }
+.field-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.num {
+  flex: none; width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center;
+  font-family: var(--mono); font-weight: 800; color: #04101a; background: var(--cyan);
+}
+.field label { font-weight: 700; display: block; }
+.field label.sub { font-weight: 600; color: var(--muted); font-size: .95rem; margin: 12px 0 6px; }
+.input-wrap { position: relative; }
+.field input {
+  width: 100%; font-family: var(--mono); font-size: 1.25rem; color: var(--text);
+  background: #0a1020; border: 2px solid var(--line); border-radius: 12px;
+  padding: 13px 70px 13px 16px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.field input[type="text"] { padding-right: 16px; }
+.field input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(34, 228, 255, .18); }
+.field input:focus-visible { outline: none; }
+.field.has-error input[aria-invalid="true"] { border-color: var(--red); }
+.field input::placeholder { color: #51618f; }
+.unit { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-family: var(--mono); color: var(--muted); pointer-events: none; }
+.hint { color: var(--muted); font-size: .9rem; margin: 8px 2px 0; }
+.error { color: var(--red); font-weight: 700; font-size: .93rem; margin: 8px 2px 0; }
+.error:empty { display: none; }
+
+.status {
+  margin-top: 20px; padding: 14px 18px; border-radius: 12px; font-weight: 700;
+  border: 1px solid var(--line); background: var(--panel2);
+}
+.status:empty { display: none; }
+.status.ok { color: var(--lime); border-color: var(--lime); background: rgba(184, 255, 61, .08); animation: popIn .5s ease both; }
+.status.ko { color: var(--red); border-color: var(--red); background: rgba(255, 68, 85, .08); }
+.status.info { color: var(--amber); border-color: var(--amber); background: rgba(255, 200, 61, .08); }
+.shake { animation: shake .45s ease; }
+
+/* Analisi del "computer di bordo" */
+.intel {
+  margin-top: 16px; padding: 16px 18px; border-radius: 12px;
+  font-family: var(--mono); font-size: .95rem; line-height: 1.6;
+  background: #070b14; border: 1px solid var(--line); border-left: 3px solid var(--lime);
+  animation: fadeIn .6s ease both;
+}
+.intel:empty { display: none; }
+.intel-title { color: var(--lime); margin-bottom: 6px; }
+.intel p { margin: 4px 0; }
+
+/* ---------- 8. SCHERMATA 3: SCELTA STRATEGIA ---------- */
+.data-strip { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.chip {
+  font-family: var(--mono); font-size: .88rem; padding: 6px 12px; border-radius: 99px;
+  background: var(--panel2); border: 1px solid var(--line); color: var(--muted);
+}
+.chip b { color: var(--text); }
+
+.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 6px 0 22px; }
+.choice { position: relative; display: block; cursor: pointer; }
+.choice.it { --accent: var(--lime);  --accent-rgb: 184, 255, 61; }
+.choice.es { --accent: var(--amber); --accent-rgb: 255, 200, 61; }
+.choice input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
+.choice-body {
+  position: relative; display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+  min-height: 140px; padding: 22px;
+  border: 2px solid var(--line); border-radius: var(--radius); background: var(--panel2);
+  transition: transform .2s, border-color .2s, box-shadow .25s, background .25s;
+}
+.choice:hover .choice-body { transform: translateY(-3px); border-color: var(--accent); }
+.choice input:checked + .choice-body {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), .1);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .3), 0 0 36px rgba(var(--accent-rgb), .22);
+}
+.choice input:focus-visible + .choice-body { outline: 3px solid var(--cyan); outline-offset: 4px; }
+.choice-ico { font-size: 2.2rem; line-height: 1; }
+.choice-body strong { font-size: 1.3rem; }
+.choice-sub { color: var(--muted); }
+.choice-flag {
+  position: absolute; top: 14px; right: 14px; display: none;
+  font-family: var(--mono); font-size: .75rem; padding: 3px 10px; border-radius: 99px;
+  color: #04101a; background: var(--accent); font-weight: 800;
+}
+.choice input:checked + .choice-body .choice-flag { display: block; animation: popIn .35s ease both; }
+
+.placeholder {
+  text-align: center; padding: 28px 16px; color: var(--muted);
+  border: 2px dashed var(--line); border-radius: var(--radius);
+}
+.pick-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+.pick-head p { margin: 0; color: var(--muted); }
+.pips { display: flex; gap: 8px; align-items: center; font-family: var(--mono); font-size: .9rem; }
+.pip { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); transition: all .3s; }
+.pip.on { background: var(--lime); border-color: var(--lime); box-shadow: 0 0 10px rgba(184, 255, 61, .7); }
+.pips.complete { color: var(--lime); }
+
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.cols.reveal { animation: fadeIn .5s ease both; }
+.col {
+  min-width: 0; padding: 16px; border-radius: var(--radius);
+  background: var(--bg2); border: 1px solid var(--line); border-top: 4px solid var(--c);
+}
+.col.pro    { --c: var(--lime); --c-rgb: 184, 255, 61; }
+.col.contro { --c: var(--red);  --c-rgb: 255, 68, 85; }
+.col h3 { margin: 0 0 12px; font-weight: 800; font-size: 1.05rem; color: var(--c); }
+
+.check { position: relative; display: block; margin-bottom: 10px; cursor: pointer; }
+.check input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
+.check-body {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+  transition: border-color .2s, background .2s, transform .15s;
+}
+.check:hover .check-body { border-color: var(--c); transform: translateX(3px); }
+.box {
+  flex: none; width: 26px; height: 26px; border-radius: 8px;
+  border: 2px solid var(--muted); display: grid; place-items: center;
+  transition: all .2s;
+}
+.check input:checked + .check-body { border-color: var(--c); background: rgba(var(--c-rgb), .1); }
+.check input:checked + .check-body .box { background: var(--c); border-color: var(--c); }
+.check input:checked + .check-body .box::after { content: "✓"; color: #04101a; font-weight: 900; font-size: 1rem; line-height: 1; }
+.check input:focus-visible + .check-body { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+/* ---------- 9. MODALE ROSSA "ALLARME" ---------- */
+.overlay {
+  position: fixed; inset: 0; z-index: 100; display: none;
+  align-items: center; justify-content: center; padding: 16px;
+  background: rgba(45, 0, 8, .86); backdrop-filter: blur(4px);
+}
+.overlay.open { display: flex; animation: fadeInFast .3s ease both; }
+.modal {
+  width: min(560px, 100%); max-height: 94vh; overflow: auto;
+  border: 2px solid var(--red); border-radius: 18px;
+  background: linear-gradient(180deg, #2b0a11, #1a0509);
+  box-shadow: 0 0 70px rgba(255, 68, 85, .55);
+  animation: alarmIn .55s cubic-bezier(.2, 1.4, .4, 1) both, pulseRed 1.4s ease-in-out .6s infinite;
+}
+.modal:focus { outline: none; }
+.hazard { height: 16px; background: repeating-linear-gradient(-45deg, var(--amber) 0 16px, #1a0508 16px 32px); }
+.modal-body { padding: 24px clamp(18px, 4vw, 32px) 28px; text-align: center; }
+.siren { font-size: 3.4rem; line-height: 1; animation: siren .7s ease-in-out infinite alternate; }
+.alarm-text { margin: 12px 0 16px; font-size: 1.4rem; font-weight: 700; line-height: 1.35; }
+.alarm-text strong { display: block; color: var(--red); font-family: var(--mono); letter-spacing: .06em; margin-bottom: 4px; }
+.conseq {
+  margin: 0 0 16px; padding: 14px 16px; border-radius: 12px; text-align: left;
+  background: rgba(0, 0, 0, .3); border: 1px solid rgba(255, 255, 255, .12);
+}
+.conseq.good { border-color: var(--lime); }
+.conseq.bad  { border-color: var(--red); }
+.xp-readout {
+  display: flex; justify-content: center; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 20px; font-family: var(--mono);
+}
+.xp-readout .lbl { color: var(--muted); }
+.xp-readout b { font-size: 3rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.xp-readout .max { color: var(--muted); }
+.xp-readout.loss b { color: var(--red); }
+.xp-readout.gain b { color: var(--lime); }
+.xp-readout .delta { font-weight: 800; font-size: 1.2rem; animation: popIn .4s ease both; }
+.xp-readout.loss .delta { color: var(--red); }
+.xp-readout.gain .delta { color: var(--lime); }
+.modal .btn { width: 100%; }
+
+/* ---------- 10. SCHERMATA 4: RIEPILOGO ---------- */
+.mission-banner {
+  padding: 18px 20px; margin-bottom: 20px; border-radius: 14px;
+  border: 2px solid var(--amber); background: rgba(255, 200, 61, .08);
+  font-size: 1.15rem; font-weight: 600;
+}
+.mission-banner strong { color: var(--amber); }
+.sum-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 16px; }
+.sum-card { background: var(--panel2); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; animation: fadeIn .6s ease both; }
+.sum-card.wide { grid-column: 1 / -1; }
+.sum-card h3 {
+  margin: 0 0 10px; font-size: .8rem; font-family: var(--mono); font-weight: 700;
+  color: var(--cyan); text-transform: uppercase; letter-spacing: .09em;
+}
+.sum-card p { margin: 4px 0; }
+.sum-card .big-val { font-size: 1.6rem; font-weight: 800; }
+.sum-card ul { list-style: none; margin: 0; padding: 0; }
+.sum-card li { padding: 3px 0 3px 26px; position: relative; }
+.sum-card li::before { position: absolute; left: 0; font-weight: 900; }
+.sum-card.pro li::before    { content: "✔"; color: var(--lime); }
+.sum-card.contro li::before { content: "✖"; color: var(--red); }
+.sum-card .none { color: var(--muted); font-style: italic; }
+
+.score {
+  text-align: center; padding: 26px 16px; margin: 22px 0 6px; border-radius: var(--radius);
+  border: 2px solid var(--lime); background: rgba(184, 255, 61, .06);
+  box-shadow: 0 0 44px rgba(184, 255, 61, .14);
+}
+.score .lbl { font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.score .big { font-family: var(--mono); font-weight: 900; line-height: 1.05; font-size: clamp(3rem, 11vw, 5.8rem); color: var(--lime); text-shadow: 0 0 28px rgba(184, 255, 61, .5); }
+.score .big small { font-size: .4em; color: var(--muted); text-shadow: none; }
+.score p { margin: 8px 0 0; font-size: 1.15rem; }
+.score p b { color: var(--amber); }
+
+/* Coriandoli */
+#confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 60; }
+.confetto { position: absolute; top: -50px; animation: fall linear forwards; }
+
+footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 0 16px 26px; font-family: var(--mono); }
+
+/* ---------- 11. ANIMAZIONI ---------- */
+@keyframes fadeIn     { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes fadeInFast { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn      { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes blink      { 50% { opacity: 0; } }
+@keyframes floatUp    { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(34px); } }
+@keyframes glowGain   { 0% { box-shadow: 0 0 0 0 rgba(184, 255, 61, .8); border-color: var(--lime); } 100% { box-shadow: 0 0 0 16px rgba(184, 255, 61, 0); } }
+@keyframes glowLoss   { 0% { box-shadow: 0 0 0 0 rgba(255, 68, 85, .9); border-color: var(--red); } 100% { box-shadow: 0 0 0 16px rgba(255, 68, 85, 0); } }
+@keyframes pulseBtn   { 50% { box-shadow: 0 0 0 10px rgba(34, 228, 255, 0), 0 8px 34px rgba(184, 255, 61, .6); } }
+@keyframes shake      { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+@keyframes alarmIn    { from { opacity: 0; transform: scale(.6) rotate(-3deg); } to { opacity: 1; transform: none; } }
+@keyframes pulseRed   { 50% { box-shadow: 0 0 110px rgba(255, 68, 85, .85); } }
+@keyframes siren      { from { transform: rotate(-12deg) scale(1); } to { transform: rotate(12deg) scale(1.15); } }
+@keyframes fall       { to { transform: translateY(112vh) rotate(540deg); opacity: .9; } }
+
+/* Chi preferisce meno movimento: animazioni quasi disattivate */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ---------- 12. RESPONSIVE (tablet e telefono) ---------- */
+@media (max-width: 860px) {
+  .hud { grid-template-columns: 1fr minmax(210px, 280px); }
+  .stepper { grid-column: 1 / -1; order: 3; }
+  .stepper li:not(.current) .lbl { display: none; }
+}
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  .hud { grid-template-columns: 1fr; gap: 10px; }
+  .brand small { display: none; }
+  .stepper { order: 0; }
+  .choice-grid, .cols { grid-template-columns: 1fr; }
+  .briefing { flex-direction: column; }
+  .terminal-text { font-size: 1.1rem; }
+  .actions .btn { width: 100%; }
+}
+</style>
+</head>
+
+<body>
+
+<noscript>
+  <p style="padding:24px;font-family:sans-serif;color:#fff;background:#900">Questa app ha bisogno di JavaScript: attivalo nel browser.</p>
+</noscript>
+
+<!-- =====================================================================
+     BARRA IN ALTO: logo, tappe della missione, contatore XP (sempre visibile)
+     ===================================================================== -->
+<header class="hud">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">👟</span>
+    <div>
+      <h1>Sfida Sneaker</h1>
+      <small>UrbanShoes Dashboard</small>
+    </div>
+  </div>
+
+  <nav aria-label="Avanzamento della missione">
+    <ol class="stepper" id="stepper">
+      <li data-step="1"><span class="dot">1</span><span class="lbl">Briefing</span></li>
+      <li data-step="2"><span class="dot">2</span><span class="lbl">Costi</span></li>
+      <li data-step="3"><span class="dot">3</span><span class="lbl">Strategia</span></li>
+      <li data-step="4"><span class="dot">4</span><span class="lbl">Pitch</span></li>
+    </ol>
+  </nav>
+
+  <div class="xp" id="xp">
+    <div class="xp-top">
+      <span class="rank" id="rankLabel">Recluta</span>
+      <span class="xp-num"><b data-xp-live>0</b> / 1000 XP</span>
+    </div>
+    <div class="xp-bar" id="xpBar" role="progressbar" aria-label="Punti esperienza"
+         aria-valuemin="0" aria-valuemax="1000" aria-valuenow="0">
+      <div class="xp-fill" id="xpFill"></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- =================================================================
+       SCHERMATA 1 - BRIEFING DEL CEO
+       ================================================================= -->
+  <section class="screen active" id="screen-1" aria-labelledby="t1">
+    <div class="card">
+      <div class="term-bar"><i></i><i></i><i></i><span>messaggio_in_arrivo.txt</span></div>
+      <span class="tag">Missione UrbanShoes</span>
+      <h2 class="screen-title" id="t1">Briefing del CEO</h2>
+
+      <div class="briefing">
+        <div class="avatar" aria-hidden="true">👔</div>
+        <div>
+          <p class="briefing-from">&gt; da: CEO UrbanShoes</p>
+          <!-- Il testo completo sta nel primo span (invisibile ma letto dagli screen reader e usato come sorgente
+               per l'effetto macchina da scrivere). Il secondo span è quello che si "scrive" a schermo. -->
+          <p class="terminal-text" id="briefingBox" title="Clicca per leggere tutto subito">
+            <span id="briefingFull">Benvenuti in UrbanShoes. Siete i nuovi Responsabili di Produzione. Dobbiamo decidere dove costruire la nuova fabbrica di sneaker. Sceglieremo l'Italia (qualità e vicinanza) o l'estero (costi bassi ma trasporti lunghi)? Il tempo stringe!</span>
+            <span aria-hidden="true"><span id="briefingTyped"></span><span class="cursor">▌</span></span>
+          </p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary pulse" id="btnAccetta" type="button">
+          Accetta la Missione <span class="xp-chip">+50 XP</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================================================================
+       SCHERMATA 2 - FASE 1: I DETECTIVE DEI COSTI
+       ================================================================= -->
+  <section class="screen" id="screen-2" aria-labelledby="t2">
+    <div class="card">
+      <div class="term-bar"><i></i><i></i><i></i><span>computer_di_bordo.exe</span></div>
+      <span class="tag">Fase 1</span>
+      <h2 class="screen-title" id="t2">I Detective dei Costi</h2>
+      <p class="lead">Cercate su internet questi dati e inseriteli nel computer di bordo.</p>
+
+      <form id="formCosti" novalidate>
+        <div class="fields">
+
+          <!-- Campo 1 -->
+          <div class="field">
+            <div class="field-head">
+              <span class="num" aria-hidden="true">1</span>
+              <label for="stipIt">💶 Stipendio medio mensile in Italia (€)</label>
+            </div>
+            <div class="input-wrap">
+              <input type="number" id="stipIt" inputmode="decimal" min="0" step="any" placeholder="es. 1800" autocomplete="off" aria-describedby="hint-stipIt err-stipIt">
+              <span class="unit">€ / mese</span>
+            </div>
+            <p class="hint" id="hint-stipIt">Suggerimento: cerca «stipendio medio mensile Italia».</p>
+            <p class="error" id="err-stipIt" role="alert"></p>
+          </div>
+
+          <!-- Campo 2 (con nome del Paese, facoltativo) -->
+          <div class="field">
+            <div class="field-head">
+              <span class="num" aria-hidden="true">2</span>
+              <label for="stipEst">🌏 Stipendio medio mensile in un Paese estero a scelta (es. Vietnam, €)</label>
+            </div>
+            <div class="input-wrap">
+              <input type="number" id="stipEst" inputmode="decimal" min="0" step="any" placeholder="es. 400" autocomplete="off" aria-describedby="hint-stipEst err-stipEst">
+              <span class="unit">€ / mese</span>
+            </div>
+            <p class="hint" id="hint-stipEst">Se trovi lo stipendio in un'altra valuta, convertilo in euro con Google.</p>
+            <p class="error" id="err-stipEst" role="alert"></p>
+
+            <label class="sub" for="paese">Quale Paese hai scelto? (facoltativo, ma poi lo ritrovi nel volantino)</label>
+            <input type="text" id="paese" maxlength="40" placeholder="es. Vietnam" autocomplete="off">
+          </div>
+
+          <!-- Campo 3 -->
+          <div class="field">
+            <div class="field-head">
+              <span class="num" aria-hidden="true">3</span>
+              <label for="km">📏 Distanza in km tra l'Italia e il Paese scelto</label>
+            </div>
+            <div class="input-wrap">
+              <input type="number" id="km" inputmode="decimal" min="0" step="any" placeholder="es. 9000" autocomplete="off" aria-describedby="hint-km err-km">
+              <span class="unit">km</span>
+            </div>
+            <p class="hint" id="hint-km">Suggerimento: cerca «distanza Milano Hanoi km» (cambia la città con il tuo Paese).</p>
+            <p class="error" id="err-km" role="alert"></p>
+          </div>
+        </div>
+
+        <div class="status" id="statusCosti" role="status" aria-live="polite"></div>
+        <div class="intel" id="intel" aria-live="polite"></div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="btnInvia" type="submit">Invia Dati 📡 <span class="xp-chip">+300 XP</span></button>
+          <button class="btn btn-ghost" id="btnFase2" type="button" disabled>🔒 Fase 2 bloccata</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- =================================================================
+       SCHERMATA 3 - FASE 2: PRO, CONTRO E L'IMPREVISTO
+       ================================================================= -->
+  <section class="screen" id="screen-3" aria-labelledby="t3">
+    <div class="card">
+      <div class="term-bar"><i></i><i></i><i></i><span>strategia_finale.exe</span></div>
+      <span class="tag">Fase 2</span>
+      <h2 class="screen-title" id="t3">Pro, Contro e l'Imprevisto</h2>
+      <p class="lead">Scegliete la strategia finale della fabbrica, poi spuntate almeno 3 voci tra vantaggi e svantaggi.</p>
+
+      <div class="data-strip" id="dataStrip" aria-label="I tuoi dati di bordo"></div>
+
+      <!-- Scelta della strategia (due grandi bottoni radio) -->
+      <fieldset>
+        <legend class="sr-only">Scegli la strategia finale</legend>
+        <div class="choice-grid">
+          <label class="choice it">
+            <input type="radio" name="strategia" value="italia">
+            <span class="choice-body">
+              <span class="choice-ico" aria-hidden="true">🏭</span>
+              <strong>Produciamo in Italia</strong>
+              <span class="choice-sub">Qualità e vicinanza</span>
+              <span class="choice-flag">✓ SCELTA</span>
+            </span>
+          </label>
+          <label class="choice es">
+            <input type="radio" name="strategia" value="estero">
+            <span class="choice-body">
+              <span class="choice-ico" aria-hidden="true">🚢</span>
+              <strong>Produciamo all'Estero</strong>
+              <span class="choice-sub">Costi bassi, trasporti lunghi</span>
+              <span class="choice-flag">✓ SCELTA</span>
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Prima della scelta -->
+      <div class="placeholder" id="pickPlaceholder">👆 Scegli una strategia: appariranno i vantaggi e gli svantaggi da valutare.</div>
+
+      <!-- Dopo la scelta: due colonne -->
+      <div id="pickArea" hidden>
+        <div class="pick-head">
+          <p>Spunta <strong>almeno 3 voci</strong> (meglio se sia vantaggi sia svantaggi!).</p>
+          <div class="pips" id="pips" aria-live="polite">
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+            <span id="pickCountText">0 / 3</span>
+          </div>
+        </div>
+        <div class="cols" id="cols">
+          <div class="col pro" role="group" aria-labelledby="hPro"><h3 id="hPro">✅ VANTAGGI</h3><div id="listPro"></div></div>
+          <div class="col contro" role="group" aria-labelledby="hContro"><h3 id="hContro">⚠️ SVANTAGGI</h3><div id="listContro"></div></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btnConferma" type="button" disabled>Conferma Scelta 🔒</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- =================================================================
+       SCHERMATA 4 - RIEPILOGO PER IL VOLANTINO
+       ================================================================= -->
+  <section class="screen" id="screen-4" aria-labelledby="t4">
+    <div class="card">
+      <div class="term-bar"><i></i><i></i><i></i><span>riepilogo_missione.txt</span></div>
+      <span class="tag">Fase finale</span>
+      <h2 class="screen-title" id="t4">Riepilogo per il Volantino</h2>
+
+      <div class="mission-banner">
+        <strong>Fase Finale!</strong> Usa questi dati per creare il tuo volantino su Canva. Hai 45 minuti per preparare il tuo Pitch per il CEO.
+      </div>
+
+      <div class="sum-grid" id="sumGrid"></div>
+
+      <div class="score" aria-live="polite">
+        <div class="lbl">XP Attuali:</div>
+        <div class="big"><span id="finalXp">0</span><small>/1000</small></div>
+        <p>I restanti <b id="finalLeft">0 XP</b> verranno assegnati dal Prof per il Volantino!</p>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-primary" id="btnCopia" type="button">📋 Copia il riepilogo</button>
+        <span id="copyMsg" role="status" style="color:var(--lime);font-weight:700"></span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>UrbanShoes · Compito di realtà · Economia aziendale</footer>
+
+<!-- =====================================================================
+     MODALE ROSSA: L'IMPREVISTO
+     ===================================================================== -->
+<div class="overlay" id="alarm" aria-hidden="true">
+  <div class="modal" id="alarmBox" role="alertdialog" aria-modal="true" aria-labelledby="alarmText" aria-describedby="alarmConseq" tabindex="-1">
+    <div class="hazard"></div>
+    <div class="modal-body">
+      <div class="siren" aria-hidden="true">🚨</div>
+      <p class="alarm-text" id="alarmText"><strong>ALLARME DEL CEO:</strong> Il costo del carburante navale è appena raddoppiato!</p>
+      <div class="conseq" id="alarmConseq"></div>
+      <div class="xp-readout" id="xpReadout">
+        <span class="lbl">XP</span><b data-xp-live>0</b><span class="max">/1000</span>
+        <span class="delta" id="xpDelta"></span>
+      </div>
+      <button class="btn btn-primary" id="btnProcedi" type="button" disabled>
+        Vai al Riepilogo Finale ▶ <span class="xp-chip">+250 XP</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="confetti" aria-hidden="true"></div>
+
+
+<script>
+/* =====================================================================
+   LOGICA DELL'APP
+   Parti: 1) utilità  2) punti XP  3) navigazione  4) schermata 1
+          5) schermata 2  6) schermata 3 + modale  7) schermata 4
+   ===================================================================== */
+(() => {
+  'use strict';
+
+  /* ---------- 1. UTILITÀ ---------- */
+  const $  = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+  // Numeri all'italiana: 1800 -> "1.800", 4.5 -> "4,5"
+  const fmt = (n, decimali = 0) => Number(n).toLocaleString('it-IT', { maximumFractionDigits: decimali });
+  // Crea un elemento. Il testo viene inserito con textContent (sicuro: niente HTML iniettato)
+  function el(tag, className, text) {
+    const e = document.createElement(tag);
+    if (className) e.className = className;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- Dati e stato della partita ---------- */
+  const XP_MAX = 1000;
+  const XP = {
+    ACCETTA: 50,    // Schermata 1
+    FASE1:   300,   // Schermata 2
+    ITALIA:  +50,   // Imprevisto: fortuna
+    ESTERO:  -50,   // Imprevisto: sfortuna
+    FINALE:  250    // Passaggio all'ultima schermata
+  };
+
+  const state = {
+    xp: 0,                  // XP reali (valore finale)
+    shown: 0,               // XP mostrati a schermo (si muovono durante l'animazione)
+    phase1Done: false,      // dati validi inviati?
+    phase1Rewarded: false,  // i 300 XP sono già stati dati?
+    data: null,             // { stipIt, stipEst, km, paese }
+    strategy: null,         // 'italia' | 'estero'
+    picks: { pro: [], contro: [] },
+    eventApplied: false,
+    finalRewarded: false,
+    summaryText: ''
+  };
+
+  /* ---------- 2. PUNTI ESPERIENZA (XP) ---------- */
+  const xpBox   = $('#xp');
+  const xpFill  = $('#xpFill');
+  const xpBar   = $('#xpBar');
+  const rankEl  = $('#rankLabel');
+
+  // Grado in base agli XP (solo per divertimento)
+  const RANKS = [[0, 'Recluta'], [100, 'Stagista'], [300, 'Operatore'], [500, 'Capo Reparto'], [700, 'Direttore'], [900, 'CEO']];
+  const rankFor = xp => RANKS.reduce((r, [min, name]) => (xp >= min ? name : r), RANKS[0][1]);
+
+  // Aggiorna tutto ciò che mostra gli XP (barra in alto + lettura nella modale)
+  function renderXP(value) {
+    const n = Math.round(value);
+    $$('[data-xp-live]').forEach(e => { e.textContent = n; });
+    xpFill.style.width = (value / XP_MAX * 100) + '%';
+    xpBar.setAttribute('aria-valuenow', n);
+    rankEl.textContent = rankFor(n);
+  }
+
+  // Animazione del numero che sale o scende
+  let rafId = null;
+  function tweenXP(to, durata, quandoFinito) {
+    cancelAnimationFrame(rafId);
+    const from = state.shown;
+    if (reduceMotion || from === to) {
+      state.shown = to; renderXP(to);
+      if (quandoFinito) quandoFinito();
+      return;
+    }
+    const t0 = performance.now();
+    const passo = (now) => {
+      const p = clamp((now - t0) / durata, 0, 1);
+      const eased = 1 - Math.pow(1 - p, 3);          // parte veloce, rallenta alla fine
+      state.shown = from + (to - from) * eased;
+      renderXP(state.shown);
+      if (p < 1) {
+        rafId = requestAnimationFrame(passo);
+      } else {
+        state.shown = to; renderXP(to);
+        if (quandoFinito) quandoFinito();
+      }
+    };
+    rafId = requestAnimationFrame(passo);
+  }
+
+  // Lampo verde (guadagno) o rosso (perdita) sulla barra XP
+  let flashTimer = null;
+  function flashXP(tipo) {
+    xpBox.classList.remove('gain', 'loss');
+    void xpBox.offsetWidth;                          // "riavvia" l'animazione CSS
+    xpBox.classList.add(tipo);
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => xpBox.classList.remove(tipo), 1400);
+  }
+
+  // Scritta "+300 XP" che galleggia accanto al contatore
+  function floatXP(valore) {
+    const f = el('span', 'xp-float ' + (valore > 0 ? 'gain' : 'loss'),
+                 (valore > 0 ? '+' : '−') + Math.abs(valore) + ' XP');
+    xpBox.appendChild(f);
+    setTimeout(() => f.remove(), 1600);
+  }
+
+  // Funzione unica per dare o togliere XP (sempre tra 0 e 1000)
+  function addXP(delta, quandoFinito) {
+    const nuovo = clamp(state.xp + delta, 0, XP_MAX);
+    const reale = nuovo - state.xp;
+    state.xp = nuovo;
+    if (reale !== 0) { floatXP(reale); flashXP(reale > 0 ? 'gain' : 'loss'); }
+    tweenXP(nuovo, 1200, quandoFinito);
+  }
+
+  /* ---------- 3. NAVIGAZIONE TRA LE SCHERMATE ---------- */
+  function aggiornaTappe(n) {
+    $$('#stepper li').forEach(li => {
+      const i = Number(li.dataset.step);
+      li.classList.toggle('done', i < n);
+      li.classList.toggle('current', i === n);
+      if (i === n) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+    });
+  }
+
+  function goTo(n) {
+    $$('.screen').forEach(s => s.classList.remove('active'));
+    const schermata = $('#screen-' + n);
+    schermata.classList.add('active');               // il CSS fa il fade-in
+    aggiornaTappe(n);
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    const titolo = $('h2', schermata);               // sposta il focus sul titolo (utile per tastiera e screen reader)
+    if (titolo) { titolo.setAttribute('tabindex', '-1'); titolo.focus({ preventScroll: true }); }
+  }
+
+  /* ---------- 4. SCHERMATA 1: BRIEFING ---------- */
+  function avviaMacchinaDaScrivere() {
+    const testo = $('#briefingFull').textContent.trim();
+    const out = $('#briefingTyped');
+    if (reduceMotion) { out.textContent = testo; return; }
+    let i = 0;
+    const timer = setInterval(() => {
+      i++;
+      out.textContent = testo.slice(0, i);
+      if (i >= testo.length) clearInterval(timer);
+    }, 16);
+    // Un clic sul testo mostra tutto subito
+    $('#briefingBox').addEventListener('click', () => { clearInterval(timer); out.textContent = testo; }, { once: true });
+  }
+
+  $('#btnAccetta').addEventListener('click', (e) => {
+    e.currentTarget.disabled = true;                 // evita di prendere gli XP più volte
+    e.currentTarget.classList.remove('pulse');
+    addXP(XP.ACCETTA);
+    goTo(2);
+  });
+
+  /* ---------- 5. SCHERMATA 2: I DETECTIVE DEI COSTI ---------- */
+  const campi = { stipIt: $('#stipIt'), stipEst: $('#stipEst'), km: $('#km'), paese: $('#paese') };
+  const formCosti = $('#formCosti');
+  const statusEl  = $('#statusCosti');
+  const btnFase2  = $('#btnFase2');
+
+  function setStatus(tipo, testo) {
+    statusEl.className = 'status ' + tipo;
+    statusEl.textContent = testo;
+  }
+
+  function setErrore(input, messaggio) {
+    $('#err-' + input.id).textContent = messaggio;
+    input.setAttribute('aria-invalid', messaggio ? 'true' : 'false');
+    input.closest('.field').classList.toggle('has-error', Boolean(messaggio));
+  }
+
+  // Controlla un campo numerico: vero se è valido
+  function controllaCampo(input) {
+    const grezzo = input.value.trim();
+    let msg = '';
+    if (grezzo === '') {
+      msg = 'Campo vuoto: inserisci un numero.';
+    } else {
+      const n = Number(grezzo);
+      if (!isFinite(n) || n <= 0) msg = 'Inserisci un numero maggiore di zero.';
+      else if (input.id === 'km' && n > 20100) msg = 'La distanza massima sulla Terra è circa 20.000 km: ricontrolla!';
+    }
+    setErrore(input, msg);
+    return msg === '';
+  }
+
+  // Messaggi del "computer di bordo" dopo l'invio dei dati
+  function mostraAnalisi() {
+    const { stipIt, stipEst, km } = state.data;
+    const box = $('#intel');
+    box.textContent = '';
+    box.appendChild(el('div', 'intel-title', '> ANALISI DEL COMPUTER DI BORDO'));
+
+    const rapporto = stipIt / stipEst;
+    let riga1;
+    if (rapporto >= 1.15) {
+      riga1 = `Un lavoratore in Italia costa circa ${fmt(rapporto, 1)} volte di più (${fmt(stipIt)} € contro ${fmt(stipEst)} € al mese).`;
+    } else if (rapporto <= 0.87) {
+      riga1 = 'Attenzione: nel Paese estero lo stipendio risulta più alto di quello italiano. Può succedere, ma ricontrolla che i numeri siano giusti e in euro!';
+    } else {
+      riga1 = 'Gli stipendi sono quasi uguali: per decidere dovrete guardare anche gli altri costi.';
+    }
+    box.appendChild(el('p', '', riga1));
+    box.appendChild(el('p', '', `Le sneaker dovranno viaggiare per circa ${fmt(km)} km: più la strada è lunga, più pagherai trasporti e carburante.`));
+    box.appendChild(el('p', '', 'Ora tocca a voi decidere!'));
+  }
+
+  formCosti.addEventListener('submit', (e) => {
+    e.preventDefault();
+    // Controllo tutti e tre i campi (senza fermarmi al primo errore, così si vedono tutti)
+    const esiti = [campi.stipIt, campi.stipEst, campi.km].map(controllaCampo);
+
+    if (!esiti.every(Boolean)) {
+      setStatus('ko', 'Dati mancanti o non validi: controlla i campi segnati in rosso.');
+      formCosti.classList.remove('shake'); void formCosti.offsetWidth; formCosti.classList.add('shake');
+      [campi.stipIt, campi.stipEst, campi.km].find(i => i.getAttribute('aria-invalid') === 'true').focus();
+      return;
+    }
+
+    // Tutto ok: salvo i dati
+    state.data = {
+      stipIt:  Number(campi.stipIt.value),
+      stipEst: Number(campi.stipEst.value),
+      km:      Number(campi.km.value),
+      paese:   campi.paese.value.trim()
+    };
+    state.phase1Done = true;
+
+    if (!state.phase1Rewarded) {                     // i 300 XP si prendono una volta sola
+      state.phase1Rewarded = true;
+      addXP(XP.FASE1);
+      setStatus('ok', '✅ Dati acquisiti! Hai guadagnato 300 XP.');
+    } else {
+      setStatus('ok', '✅ Dati aggiornati! (i 300 XP li avevi già presi)');
+    }
+    mostraAnalisi();
+
+    btnFase2.disabled = false;                       // sblocca la Fase 2
+    btnFase2.textContent = 'Vai alla Fase 2 ▶';
+    btnFase2.className = 'btn btn-primary pulse';
+  });
+
+  // Se cambiano un dato dopo l'invio, devono premere di nuovo "Invia Dati"
+  formCosti.addEventListener('input', (e) => {
+    const input = e.target;
+    if (input.id in campi && input.id !== 'paese') setErrore(input, '');
+    if (state.phase1Done) {
+      state.phase1Done = false;
+      btnFase2.disabled = true;
+      btnFase2.textContent = '🔒 Fase 2 bloccata';
+      btnFase2.className = 'btn btn-ghost';
+      setStatus('info', 'Hai cambiato un dato: premi di nuovo «Invia Dati» per confermare.');
+    }
+  });
+
+  btnFase2.addEventListener('click', () => {
+    creaStriscia();
+    goTo(3);
+  });
+
+  /* ---------- 6. SCHERMATA 3: STRATEGIA + IMPREVISTO ---------- */
+
+  // Elenco di vantaggi e svantaggi per ogni strategia
+  const STRATEGIE = {
+    italia: {
+      nome: 'Produciamo in Italia',
+      vantaggi: [
+        'Consegne veloci',
+        'Qualità «Made in Italy»',
+        'Trasporti brevi: meno carburante',
+        'Controllo diretto sulla fabbrica',
+        'Regole chiare su sicurezza e diritti dei lavoratori',
+        'Siamo vicini ai clienti e seguiamo subito le mode'
+      ],
+      svantaggi: [
+        'Costi del lavoro alti (stipendi e contributi)',
+        'Costi alti per fabbrica ed energia',
+        'Il prezzo finale delle sneaker è più alto',
+        'Burocrazia e permessi lenti',
+        'Concorrenza delle sneaker low cost straniere'
+      ]
+    },
+    estero: {
+      nome: "Produciamo all'Estero",
+      vantaggi: [
+        'Costi del lavoro bassi',
+        'Il prezzo finale delle sneaker è più basso',
+        'Possiamo produrre grandi quantità',
+        'Più guadagno per ogni paio venduto',
+        'Terreni ed energia costano meno',
+        'Apriamo la strada a nuovi mercati nel mondo'
+      ],
+      svantaggi: [
+        'Trasporti lunghi e costosi',
+        'Inquinamento da trasporto (navi e camion)',
+        'Consegne lente: le sneaker arrivano dopo settimane',
+        'Controllo qualità più difficile',
+        'Rischio di ritardi, dogane e imprevisti',
+        'Difficile controllare le condizioni di lavoro'
+      ]
+    }
+  };
+
+  const pickArea   = $('#pickArea');
+  const placeholder = $('#pickPlaceholder');
+  const btnConferma = $('#btnConferma');
+
+  // Striscia con i dati inseriti nella Fase 1 (così li hanno sott'occhio)
+  function creaStriscia() {
+    const { stipIt, stipEst, km, paese } = state.data;
+    const strip = $('#dataStrip');
+    strip.textContent = '';
+    const chips = [
+      ['💶 Italia: ', `${fmt(stipIt)} €`],
+      ['💶 ' + (paese || 'Estero') + ': ', `${fmt(stipEst)} €`],
+      ['📏 Distanza: ', `${fmt(km)} km`]
+    ];
+    chips.forEach(([etichetta, valore]) => {
+      const c = el('span', 'chip', etichetta);
+      c.appendChild(el('b', '', valore));
+      strip.appendChild(c);
+    });
+  }
+
+  // Crea le checkbox di una colonna
+  function riempiLista(contenitore, voci, tipo) {
+    contenitore.textContent = '';
+    voci.forEach((testo, i) => {
+      const label = el('label', 'check');
+      const input = el('input');
+      input.type = 'checkbox';
+      input.name = tipo;
+      input.value = testo;
+      input.id = `${tipo}-${i}`;
+      const body = el('span', 'check-body');
+      const box = el('span', 'box'); box.setAttribute('aria-hidden', 'true');
+      body.append(box, el('span', 'txt', testo));
+      label.append(input, body);
+      contenitore.appendChild(label);
+    });
+  }
+
+  // Quando scelgono Italia / Estero compaiono le checkbox giuste
+  $$('input[name="strategia"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      state.strategy = radio.value;
+      const s = STRATEGIE[radio.value];
+      riempiLista($('#listPro'), s.vantaggi, 'pro');
+      riempiLista($('#listContro'), s.svantaggi, 'contro');
+      placeholder.hidden = true;
+      pickArea.hidden = false;
+      const cols = $('#cols');
+      cols.classList.remove('reveal'); void cols.offsetWidth; cols.classList.add('reveal');
+      aggiornaConteggio();
+    });
+  });
+
+  pickArea.addEventListener('change', aggiornaConteggio);
+
+  // Conta le voci spuntate: servono almeno 3
+  function aggiornaConteggio() {
+    const n = $$('#pickArea input[type="checkbox"]:checked').length;
+    $$('#pips .pip').forEach((p, i) => p.classList.toggle('on', i < n));
+    $('#pickCountText').textContent = `${n} / 3` + (n >= 3 ? ' ✓' : '');
+    $('#pips').classList.toggle('complete', n >= 3);
+    const pronto = Boolean(state.strategy) && n >= 3;
+    btnConferma.disabled = !pronto;
+    btnConferma.textContent = pronto ? 'Conferma Scelta ✔' : 'Conferma Scelta 🔒';
+    btnConferma.classList.toggle('pulse', pronto);
+  }
+
+  // --- L'IMPREVISTO ---
+  const alarm     = $('#alarm');
+  const alarmBox  = $('#alarmBox');
+  const btnProcedi = $('#btnProcedi');
+
+  btnConferma.addEventListener('click', () => {
+    state.picks.pro    = $$('#listPro input:checked').map(i => i.value);
+    state.picks.contro = $$('#listContro input:checked').map(i => i.value);
+    $$('#screen-3 input').forEach(i => { i.disabled = true; });   // da qui non si cambia più
+    btnConferma.disabled = true;
+    btnConferma.classList.remove('pulse');
+    apriAllarme();
+  });
+
+  function apriAllarme() {
+    const estero = state.strategy === 'estero';
+    const delta  = estero ? XP.ESTERO : XP.ITALIA;
+    const conseguenza = $('#alarmConseq');
+    conseguenza.className = 'conseq ' + (estero ? 'bad' : 'good');
+    conseguenza.textContent = estero
+      ? `⚠️ Le tue sneaker devono viaggiare per mare per circa ${fmt(state.data.km)} km: i trasporti costano il doppio e il prezzo finale sale. Brutta notizia!`
+      : '🍀 Fortuna! Produci in Italia, vicino ai tuoi clienti: il rincaro del carburante navale ti tocca pochissimo.';
+
+    // La lettura XP nella modale parte dal valore attuale
+    const readout = $('#xpReadout');
+    readout.className = 'xp-readout';
+    $('#xpDelta').textContent = '';
+
+    btnProcedi.disabled = true;
+    alarm.classList.add('open');
+    alarm.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    alarmBox.focus();
+
+    // Dopo una breve pausa (per far leggere l'allarme) cambiano gli XP
+    const sblocca = () => { btnProcedi.disabled = false; btnProcedi.focus(); };
+    setTimeout(() => {
+      if (state.eventApplied) return;
+      state.eventApplied = true;
+      readout.classList.add(estero ? 'loss' : 'gain');
+      $('#xpDelta').textContent = estero ? '−50 XP' : '+50 XP · Fortuna!';
+      addXP(delta, sblocca);
+    }, reduceMotion ? 0 : 900);
+    setTimeout(sblocca, 3000);                        // rete di sicurezza se l'animazione si blocca
+  }
+
+  // Dentro la modale il focus resta sul bottone / sulla finestra
+  alarm.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab') { e.preventDefault(); (btnProcedi.disabled ? alarmBox : btnProcedi).focus(); }
+  });
+
+  btnProcedi.addEventListener('click', () => {
+    if (state.finalRewarded) return;
+    state.finalRewarded = true;
+    alarm.classList.remove('open');
+    alarm.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    addXP(XP.FINALE);
+    costruisciRiepilogo();
+    goTo(4);
+    setTimeout(coriandoli, 900);
+  });
+
+  /* ---------- 7. SCHERMATA 4: RIEPILOGO ---------- */
+
+  // Crea una scheda del riepilogo. contenuto = funzione che riempie la scheda
+  function scheda(titolo, classe, riempi) {
+    const s = el('div', 'sum-card ' + classe);
+    s.appendChild(el('h3', '', titolo));
+    riempi(s);
+    return s;
+  }
+  function lista(voci, vuoto) {
+    if (!voci.length) return el('p', 'none', vuoto);
+    const ul = el('ul');
+    voci.forEach(v => ul.appendChild(el('li', '', v)));
+    return ul;
+  }
+
+  function costruisciRiepilogo() {
+    const { stipIt, stipEst, km, paese } = state.data;
+    const estero = state.strategy === 'estero';
+    const nomePaese = paese || 'Paese estero';
+    const destinazione = estero ? 'Estero' + (paese ? ' (' + paese + ')' : '') : 'Italia';
+    const imprevisto = estero
+      ? 'Carburante navale raddoppiato: trasporti più cari. −50 XP'
+      : 'Carburante navale raddoppiato, ma produci vicino ai clienti. Fortuna! +50 XP';
+
+    const grid = $('#sumGrid');
+    grid.textContent = '';
+
+    grid.appendChild(scheda('💶 Stipendi inseriti', '', s => {
+      s.appendChild(el('p', '', `Italia: ${fmt(stipIt)} € al mese`));
+      s.appendChild(el('p', '', `${nomePaese}: ${fmt(stipEst)} € al mese`));
+    }));
+    grid.appendChild(scheda('📏 Distanza', '', s => {
+      s.appendChild(el('p', 'big-val', `${fmt(km)} km`));
+      s.appendChild(el('p', '', `tra l'Italia e ${paese || 'il Paese scelto'}`));
+    }));
+    grid.appendChild(scheda('🏭 Destinazione scelta', '', s => {
+      s.appendChild(el('p', 'big-val', destinazione));
+      s.appendChild(el('p', '', STRATEGIE[state.strategy].nome));
+    }));
+    grid.appendChild(scheda('🚨 L\'imprevisto', '', s => {
+      s.appendChild(el('p', '', imprevisto));
+    }));
+    grid.appendChild(scheda('✅ Vantaggi scelti', 'pro', s => {
+      s.appendChild(lista(state.picks.pro, 'Nessun vantaggio selezionato'));
+    }));
+    grid.appendChild(scheda('⚠️ Svantaggi scelti', 'contro', s => {
+      s.appendChild(lista(state.picks.contro, 'Nessuno svantaggio selezionato'));
+    }));
+
+    // Punteggio finale
+    $('#finalXp').textContent = state.xp;
+    $('#finalLeft').textContent = (XP_MAX - state.xp) + ' XP';
+
+    // Testo semplice da copiare e incollare in Canva
+    const righe = [
+      'SFIDA SNEAKER - URBANSHOES',
+      'RIEPILOGO DELLA MISSIONE',
+      '',
+      'STIPENDI MEDI MENSILI',
+      `- Italia: ${fmt(stipIt)} €`,
+      `- ${nomePaese}: ${fmt(stipEst)} €`,
+      '',
+      `DISTANZA: ${fmt(km)} km`,
+      '',
+      `DESTINAZIONE SCELTA: ${destinazione}`,
+      '',
+      'VANTAGGI SCELTI',
+      ...(state.picks.pro.length ? state.picks.pro.map(v => '- ' + v) : ['- (nessuno)']),
+      '',
+      'SVANTAGGI SCELTI',
+      ...(state.picks.contro.length ? state.picks.contro.map(v => '- ' + v) : ['- (nessuno)']),
+      '',
+      `IMPREVISTO: ${imprevisto}`,
+      '',
+      `XP ATTUALI: ${state.xp}/${XP_MAX}`
+    ];
+    state.summaryText = righe.join('\n');
+  }
+
+  // Copia negli appunti (con piano B per i browser più vecchi)
+  async function copiaTesto(testo) {
+    try {
+      await navigator.clipboard.writeText(testo);
+      return true;
+    } catch (_) { /* provo il metodo vecchio */ }
+    try {
+      const ta = el('textarea');
+      ta.value = testo;
+      ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (_) { return false; }
+  }
+
+  $('#btnCopia').addEventListener('click', async () => {
+    const ok = await copiaTesto(state.summaryText);
+    const msg = $('#copyMsg');
+    msg.style.color = ok ? 'var(--lime)' : 'var(--red)';
+    msg.textContent = ok ? 'Copiato! Ora incollalo dove vuoi ✅' : 'Non riesco a copiare: seleziona il testo a mano.';
+    setTimeout(() => { msg.textContent = ''; }, 3500);
+  });
+
+  // Coriandoli di festa
+  function coriandoli() {
+    if (reduceMotion) return;
+    const wrap = $('#confetti');
+    const icone = ['👟', '⭐', '🎉', '💶', '✨'];
+    for (let i = 0; i < 28; i++) {
+      const c = el('span', 'confetto', icone[i % icone.length]);
+      c.style.left = (Math.random() * 100) + 'vw';
+      c.style.fontSize = (18 + Math.random() * 20) + 'px';
+      c.style.animationDuration = (2.6 + Math.random() * 2.4) + 's';
+      c.style.animationDelay = (Math.random() * 0.8) + 's';
+      wrap.appendChild(c);
+      setTimeout(() => c.remove(), 6500);
+    }
+  }
+
+  /* ---------- AVVIO ---------- */
+  renderXP(0);
+  aggiornaTappe(1);
+  avviaMacchinaDaScrivere();
+})();
+</script>
+</body>
+</html>
